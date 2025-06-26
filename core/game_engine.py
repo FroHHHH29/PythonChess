@@ -1,6 +1,5 @@
 import chess
 
-
 class ChessGame:
     def __init__(self):
         self.board = chess.Board()
@@ -26,7 +25,7 @@ class ChessGame:
 
     def get_game_result(self) -> str:
         if self.board.is_checkmate():
-            return "Мат! Победили " + ("чёрные" if self.board.turn else "белые")
+            return "Мaт! Победили " + ("чёрные" if self.board.turn else "белые")
         elif self.board.is_stalemate():
             return "Пат! Ничья"
         return "Игра продолжается"

@@ -14,7 +14,7 @@ class ChessBoard(tk.Canvas):
         self.bind("<Button-1>", self.on_click)
 
     def load_piece_images(self):
-        """Создаем простые изображения фигур с помощью Tkinter"""
+
         images = {}
         pieces = {
             'R': 'ладья', 'N': 'конь', 'B': 'слон',
@@ -30,14 +30,12 @@ class ChessBoard(tk.Canvas):
             for piece_code, piece_name in pieces.items():
                 key = f"{color_code}{piece_code}"
                 try:
-                    # Пробуем загрузить из assets если есть
                     img = PhotoImage(file=f"assets/pieces/{key}.gif")
                 except:
-                    # Создаем текстовое представление
+
                     img = PhotoImage(width=self.square_size, height=self.square_size)
                     img.put(color_names[0], to=(0, 0, self.square_size, self.square_size))
 
-                    # Простой текст вместо изображений
                     self.create_text(
                         self.square_size // 2,
                         self.square_size // 2,
@@ -52,7 +50,6 @@ class ChessBoard(tk.Canvas):
         """Отрисовка шахматной доски с фигурами"""
         self.delete("all")
 
-        # Рисуем клетки доски
         for row in range(8):
             for col in range(8):
                 x1 = col * self.square_size
@@ -60,11 +57,9 @@ class ChessBoard(tk.Canvas):
                 x2 = x1 + self.square_size
                 y2 = y1 + self.square_size
 
-                # Цвет клетки
                 color = "#f0d9b5" if (row + col) % 2 == 0 else "#b58863"
                 self.create_rectangle(x1, y1, x2, y2, fill=color, outline="")
 
-                # Отрисовка фигур
                 if self.game:
                     square = chess.square(col, 7 - row)
                     piece = self.game.board.piece_at(square)
@@ -87,14 +82,12 @@ class ChessBoard(tk.Canvas):
         row = event.y // self.square_size
         square = chess.square(col, 7 - row)
 
-        # Если уже выбрана фигура - делаем ход
         if self.selected_square is not None:
             move_uci = f"{chess.square_name(self.selected_square)}{chess.square_name(square)}"
 
-            # Превращение пешки
             piece = self.game.board.piece_at(self.selected_square)
             if piece and piece.piece_type == chess.PAWN and row in [0, 7]:
-                move_uci += "q"  # Всегда в ферзя
+                move_uci += "q"
 
             if self.game.make_move(move_uci):
                 self.draw_board()
@@ -102,13 +95,12 @@ class ChessBoard(tk.Canvas):
             self.selected_square = None
             return
 
-        # Выбор фигуры
         if self.game.board.piece_at(square) and (
                 (self.game.board.turn == chess.WHITE and self.game.board.piece_at(square).color == chess.WHITE) or
                 (self.game.board.turn == chess.BLACK and self.game.board.piece_at(square).color == chess.BLACK)
         ):
             self.selected_square = square
-            # Подсветка выбранной фигуры
+
             x = col * self.square_size
             y = row * self.square_size
             self.create_rectangle(

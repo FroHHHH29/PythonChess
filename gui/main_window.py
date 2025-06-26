@@ -5,7 +5,7 @@ from .board import ChessBoard
 class MainWindow(tk.Tk):
     def __init__(self, game):
         super().__init__()
-        self.title("Шахматы")
+        self.title("Шахмaты")
         self.geometry("500x550")
         self.game = game
 
