@@ -10,6 +10,7 @@ class MainWindow(tk.Tk):
         self.title("Шахматы")
         self.geometry("500x550")
         self.game = ChessGame()
+        self.name = int(input())
 
         self.chess_board = ChessBoard(self, self.game, size=400)
         self.chess_board.pack(pady=20)
