@@ -1,7 +1,7 @@
 import tkinter as tk
 import chess
 import os
-from tkinter import PhotoImage
+from PIL import Image, ImageTk
 
 
 class ChessBoard(tk.Canvas):
@@ -9,45 +9,61 @@ class ChessBoard(tk.Canvas):
         super().__init__(parent, width=size, height=size, bg="white")
         self.game = game
         self.square_size = size // 8
-        self.piece_images = self.load_piece_images()
+        self.piece_images = {}
         self.selected_square = None
+        self.possible_moves = []
         self.bind("<Button-1>", self.on_click)
+        self.animation_id = None
+
+        self.load_piece_images()
+        self.draw_board()
 
     def load_piece_images(self):
-
-        images = {}
-        pieces = {
-            'R': 'ладья', 'N': 'конь', 'B': 'слон',
-            'Q': 'ферзь', 'K': 'король', 'P': 'пешка'
+        piece_mapping = {
+            'R': 'rook',
+            'N': 'knight',
+            'B': 'bishop',
+            'Q': 'queen',
+            'K': 'king',
+            'P': 'pawn'
         }
 
-        colors = {
-            'w': ('white', 'black'),
-            'b': ('black', 'white')
-        }
+        pieces = [
+            'bB', 'bK', 'bN', 'bP', 'bQ', 'bR',
+            'wB', 'wK', 'wN', 'wP', 'wQ', 'wR'
+        ]
 
-        for color_code, color_names in colors.items():
-            for piece_code, piece_name in pieces.items():
-                key = f"{color_code}{piece_code}"
+        piece_size = int(self.square_size * 0.7)
+
+        for piece_code in pieces:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            img_path = os.path.join(
+                current_dir, "assets", "pieces", f"{piece_code}.gif"
+            )
+
+            if os.path.exists(img_path):
                 try:
-                    img = PhotoImage(file=f"assets/pieces/{key}.gif")
-                except:
+                    img = Image.open(img_path)
+                    img = img.resize((piece_size, piece_size), Image.LANCZOS)
+                    self.piece_images[piece_code] = ImageTk.PhotoImage(img)
+                except Exception as e:
+                    self.piece_images[piece_code] = None
+            else:
+                self.piece_images[piece_code] = None
 
-                    img = PhotoImage(width=self.square_size, height=self.square_size)
-                    img.put(color_names[0], to=(0, 0, self.square_size, self.square_size))
-
-                    self.create_text(
-                        self.square_size // 2,
-                        self.square_size // 2,
-                        text=piece_name[0].upper(),
-                        fill=color_names[1],
-                        font=("Arial", self.square_size // 2, "bold")
-                    )
-                images[key] = img
-        return images
+    def get_piece_image_key(self, piece):
+        color_prefix = 'w' if piece.color == chess.WHITE else 'b'
+        piece_type = {
+            chess.ROOK: 'R',
+            chess.KNIGHT: 'N',
+            chess.BISHOP: 'B',
+            chess.QUEEN: 'Q',
+            chess.KING: 'K',
+            chess.PAWN: 'P'
+        }.get(piece.piece_type, '')
+        return f"{color_prefix}{piece_type}"
 
     def draw_board(self):
-        """Отрисовка шахматной доски с фигурами"""
         self.delete("all")
 
         for row in range(8):
@@ -64,17 +80,89 @@ class ChessBoard(tk.Canvas):
                     square = chess.square(col, 7 - row)
                     piece = self.game.board.piece_at(square)
                     if piece:
-                        piece_code = ('w' if piece.color == chess.WHITE else 'b') + piece.symbol().upper()
-                        img = self.piece_images.get(piece_code)
+                        img_key = self.get_piece_image_key(piece)
+                        img = self.piece_images.get(img_key)
+
                         if img:
+                            img_x = x1 + (self.square_size - img.width()) // 2
+                            img_y = y1 + (self.square_size - img.height()) // 2
                             self.create_image(
-                                x1 + self.square_size // 2,
-                                y1 + self.square_size // 2,
-                                image=img
+                                img_x, img_y, anchor=tk.NW, image=img,
+                                tags=f"piece_{square}"
                             )
 
+        if self.selected_square is not None:
+            self.highlight_possible_moves()
+
+        self.highlight_check()
+
+        if self.selected_square is not None:
+            self.animate_selected_piece()
+
+    def highlight_possible_moves(self):
+        for move in self.possible_moves:
+            if move.to_square == self.selected_square:
+                continue
+
+            col = chess.square_file(move.to_square)
+            row = 7 - chess.square_rank(move.to_square)
+            x = col * self.square_size + self.square_size // 2
+            y = row * self.square_size + self.square_size // 2
+
+            radius = self.square_size // 6
+            self.create_oval(
+                x - radius, y - radius,
+                x + radius, y + radius,
+                fill="green", outline="",
+                stipple="gray12",
+                tags="possible_move"
+            )
+
+    def highlight_check(self):
+        if self.game and self.game.board.is_check():
+            king_color = self.game.board.turn
+            king_square = self.game.board.king(king_color)
+
+            if king_square is not None:
+                col = chess.square_file(king_square)
+                row = 7 - chess.square_rank(king_square)
+                x1 = col * self.square_size
+                y1 = row * self.square_size
+                x2 = x1 + self.square_size
+                y2 = y1 + self.square_size
+
+                self.create_rectangle(
+                    x1, y1, x2, y2,
+                    outline="red", width=3,
+                    tags="check_highlight"
+                )
+
+    def animate_selected_piece(self):
+        if self.animation_id:
+            self.after_cancel(self.animation_id)
+
+        piece_id = None
+        for item in self.find_withtag(f"piece_{self.selected_square}"):
+            if "piece" in self.gettags(item):
+                piece_id = item
+                break
+
+        if not piece_id:
+            return
+
+        start_x, start_y = self.coords(piece_id)
+        amplitude = 5
+        duration = 500
+
+        def animate(timestamp):
+            progress = (timestamp % duration) / duration
+            offset = amplitude * abs(2 * (progress - 0.5))
+            self.coords(piece_id, start_x, start_y - offset)
+            self.animation_id = self.after(10, animate, timestamp + 10)
+
+        self.animation_id = self.after(10, animate, 0)
+
     def on_click(self, event):
-        """Обработка кликов по доске"""
         if not self.game or self.game.is_game_over:
             return
 
@@ -83,27 +171,50 @@ class ChessBoard(tk.Canvas):
         square = chess.square(col, 7 - row)
 
         if self.selected_square is not None:
-            move_uci = f"{chess.square_name(self.selected_square)}{chess.square_name(square)}"
+            from_square = chess.square_name(self.selected_square)
+            to_square = chess.square_name(square)
+            move_uci = f"{from_square}{to_square}"
 
-            piece = self.game.board.piece_at(self.selected_square)
-            if piece and piece.piece_type == chess.PAWN and row in [0, 7]:
-                move_uci += "q"
+            move_made = False
+            possible_moves_copy = list(self.possible_moves)
 
-            if self.game.make_move(move_uci):
+            for move in possible_moves_copy:
+                if move.to_square == square:
+                    piece = self.game.board.piece_at(self.selected_square)
+                    if piece and piece.piece_type == chess.PAWN:
+                        if row in [0, 7]:
+                            move_uci += "q"
+
+                    if self.game.make_move(move_uci):
+                        move_made = True
+                        break
+
+            if move_made:
+                self.selected_square = None
+                self.possible_moves = []
                 self.draw_board()
-                self.master.update_status()
-            self.selected_square = None
+                if self.game.is_game_over:
+                    self.master.update_status(self.game.get_game_result())
+                    if self.game.board.is_checkmate():
+                        self.master.show_play_again_button()
+                else:
+                    turn = "белых" if self.game.board.turn == chess.WHITE else "чёрных"
+                    self.master.update_status(f"Ход {turn}")
+            else:
+                self.selected_square = None
+                self.possible_moves = []
+                self.draw_board()
             return
 
-        if self.game.board.piece_at(square) and (
-                (self.game.board.turn == chess.WHITE and self.game.board.piece_at(square).color == chess.WHITE) or
-                (self.game.board.turn == chess.BLACK and self.game.board.piece_at(square).color == chess.BLACK)
-        ):
+        piece = self.game.board.piece_at(square)
+        if piece and piece.color == self.game.board.turn:
             self.selected_square = square
-
-            x = col * self.square_size
-            y = row * self.square_size
-            self.create_rectangle(
-                x, y, x + self.square_size, y + self.square_size,
-                outline="red", width=2
-            )
+            self.possible_moves = [
+                move for move in self.game.board.legal_moves
+                if move.from_square == square
+            ]
+            self.draw_board()
+        else:
+            self.selected_square = None
+            self.possible_moves = []
+            self.draw_board()
