@@ -6,6 +6,7 @@ from tkinter import messagebox
 from gui.board import ChessBoard
 from core.game_engine import ChessGame
 
+
 # Файл для сохранения игры
 SAVE_FILE = "chess_save.pkl"
 
