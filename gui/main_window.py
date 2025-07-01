@@ -388,3 +388,5 @@ class MainWindow(tk.Tk):
             # Показываем чей сейчас ход
             turn = 'белых' if self.game.board.turn == chess.WHITE else 'чёрных'
             self.status_var.set(f'Ход {turn}')
+
+

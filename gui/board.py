@@ -6,6 +6,7 @@ import os
 import chess
 
 
+
 class ChessBoard(Canvas):
     def __init__(self, parent=None, game=None, controller=None, size=500):
         """Инициализация шахматной доски"""
