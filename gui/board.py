@@ -1,19 +1,19 @@
 from tkinter import Tk, Canvas
 import tkinter as tk
 from PIL import Image, ImageTk
-from game_engine import ChessGame
+from core.game_engine import ChessGame
 import os
 import chess
 
 
-
 class ChessBoard(Canvas):
-    def __init__(self, parent=None, size=500):
+    def __init__(self, parent=None, game=None, controller=None, size=500):
         """Инициализация шахматной доски"""
         super().__init__(parent, width=size, height=size, bg="white")  # создаем холст для доски
         self.pack()
 
-        self.game = ChessGame()  # экземпляр класса ChessGame
+        self.game = game if game else ChessGame()  # экземпляр класса ChessGame
+        self.controller = controller  # ссылка на контроллер (MainWindow)
         self.sq_size = size // 8  # размер одной клетки
         self.sq_pict = {}  # словарь для хранения изображений фигур
         self.selected_square = None  # выбранная клетка (None если нет выбора)
@@ -38,10 +38,10 @@ class ChessBoard(Canvas):
                 self.create_rectangle(x1, y1, x2, y2, fill=color, outline="")
 
                 # Отрисовка фигур
-                сonvert_coord = chess.square(c, 7 - r)  # преобразование координат (в tkinter Y растет вниз)
-                piec = self.game.board.piece_at(сonvert_coord)  # получаем фигуру на текущей клетке
-                if piec:  # если фигура существует
-                    img_key = self.get_piece_image_key(piec)
+                convert_coord = chess.square(c, 7 - r)  # преобразование координат (в tkinter Y растет вниз)
+                piece = self.game.board.piece_at(convert_coord)  # получаем фигуру на текущей клетке
+                if piece:  # если фигура существует
+                    img_key = self.get_piece_image_key(piece)
                     img = self.sq_pict.get(img_key)  # получаем изображение фигуры из словаря
 
                     if img:
@@ -52,27 +52,27 @@ class ChessBoard(Canvas):
                         # Размещаем фигуру на холсте с тегом для идентификации
                         self.create_image(
                             img_x, img_y, anchor=tk.NW, image=img,
-                            tags=f"piece_{сonvert_coord}"
+                            tags=f"piece_{convert_coord}"
                         )
 
         # Подсветка возможных ходов для выбранной фигуры
         if self.selected_square is not None:
             self.highlight_possible_moves()
 
-    def get_piece_image_key(self, piec):
+    def get_piece_image_key(self, piece):
         """Генерация ключа для изображения фигуры"""
-        color_prefix = 'w' if piec.color == chess.WHITE else 'b'  # префикс цвета (w - белые, b - черные)
+        color_prefix = 'w' if piece.color == chess.WHITE else 'b'  # префикс цвета (w - белые, b - черные)
         # Преобразование типа фигуры в символ
-        piec_type = {
+        piece_type = {
             chess.ROOK: 'R',
             chess.KNIGHT: 'N',
             chess.BISHOP: 'B',
             chess.QUEEN: 'Q',
             chess.KING: 'K',
             chess.PAWN: 'P'
-        }.get(piec.piece_type, '')  # получаем символ типа фигуры или пустую строку
+        }.get(piece.piece_type, '')  # получаем символ типа фигуры или пустую строку
 
-        return f"{color_prefix}{piec_type}"  # пример: 'wK' - белый король
+        return f"{color_prefix}{piece_type}"  # пример: 'wK' - белый король
 
     def load_piece_images(self):
         """Загрузка изображений шахматных фигур"""
@@ -86,7 +86,8 @@ class ChessBoard(Canvas):
         for piece_code in pieces:
             # Формируем путь к файлу с изображением
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            image_path = os.path.join(current_dir, "assets", "pieces", f"{piece_code}.gif")
+            assets_dir = os.path.join(current_dir, "assets", "pieces")
+            image_path = os.path.join(assets_dir, f"{piece_code}.gif")
 
             if os.path.exists(image_path):  # если файл существует
                 try:
@@ -95,8 +96,10 @@ class ChessBoard(Canvas):
                     img = img.resize((piece_size, piece_size), Image.LANCZOS)
                     self.sq_pict[piece_code] = ImageTk.PhotoImage(img)  # сохраняем в словарь
                 except Exception as e:
+                    print(f"Ошибка загрузки изображения {piece_code}: {e}")
                     self.sq_pict[piece_code] = None  # в случае ошибки сохраняем None
             else:
+                print(f"Файл не найден: {image_path}")
                 self.sq_pict[piece_code] = None  # если файл не найден
 
     def highlight_possible_moves(self):
@@ -146,6 +149,9 @@ class ChessBoard(Canvas):
                     # Пытаемся сделать ход
                     if self.game.make_move(move_uci):
                         move_made = True
+                        if self.controller:
+                            self.controller.add_move_to_history(move)
+                            self.controller.update_status()
                         self.draw_board()  # обновляем доску
                         break  # выходим из цикла после успешного хода
 
