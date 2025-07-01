@@ -3,6 +3,7 @@ import chess
 import os
 from PIL import Image, ImageTk
 
+
 class ChessBoard(tk.Canvas):
     def __init__(self, parent, game, main_window, size=500):
         super().__init__(parent, width=size, height=size, bg="white")
