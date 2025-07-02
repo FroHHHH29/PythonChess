@@ -3,17 +3,16 @@ import chess
 import os
 from PIL import Image, ImageTk
 
-
 class ChessBoard(tk.Canvas):
-    def __init__(self, parent, game, size=400):
+    def __init__(self, parent, game, main_window, size=500):
         super().__init__(parent, width=size, height=size, bg="white")
         self.game = game
+        self.main_window = main_window
         self.square_size = size // 8
         self.piece_images = {}
         self.selected_square = None
         self.possible_moves = []
         self.bind("<Button-1>", self.on_click)
-        self.animation_id = None
 
         self.load_piece_images()
         self.draw_board()
@@ -96,14 +95,8 @@ class ChessBoard(tk.Canvas):
 
         self.highlight_check()
 
-        if self.selected_square is not None:
-            self.animate_selected_piece()
-
     def highlight_possible_moves(self):
         for move in self.possible_moves:
-            if move.to_square == self.selected_square:
-                continue
-
             col = chess.square_file(move.to_square)
             row = 7 - chess.square_rank(move.to_square)
             x = col * self.square_size + self.square_size // 2
@@ -137,31 +130,6 @@ class ChessBoard(tk.Canvas):
                     tags="check_highlight"
                 )
 
-    def animate_selected_piece(self):
-        if self.animation_id:
-            self.after_cancel(self.animation_id)
-
-        piece_id = None
-        for item in self.find_withtag(f"piece_{self.selected_square}"):
-            if "piece" in self.gettags(item):
-                piece_id = item
-                break
-
-        if not piece_id:
-            return
-
-        start_x, start_y = self.coords(piece_id)
-        amplitude = 5
-        duration = 500
-
-        def animate(timestamp):
-            progress = (timestamp % duration) / duration
-            offset = amplitude * abs(2 * (progress - 0.5))
-            self.coords(piece_id, start_x, start_y - offset)
-            self.animation_id = self.after(10, animate, timestamp + 10)
-
-        self.animation_id = self.after(10, animate, 0)
-
     def on_click(self, event):
         if not self.game or self.game.is_game_over:
             return
@@ -187,6 +155,7 @@ class ChessBoard(tk.Canvas):
 
                     if self.game.make_move(move_uci):
                         move_made = True
+                        self.main_window.add_move_to_history(move)
                         break
 
             if move_made:
@@ -194,12 +163,12 @@ class ChessBoard(tk.Canvas):
                 self.possible_moves = []
                 self.draw_board()
                 if self.game.is_game_over:
-                    self.master.update_status(self.game.get_game_result())
+                    self.main_window.update_status(self.game.get_game_result())
                     if self.game.board.is_checkmate():
-                        self.master.show_play_again_button()
+                        self.main_window.show_play_again()
                 else:
                     turn = "белых" if self.game.board.turn == chess.WHITE else "чёрных"
-                    self.master.update_status(f"Ход {turn}")
+                    self.main_window.update_status(f"Ход {turn}")
             else:
                 self.selected_square = None
                 self.possible_moves = []
