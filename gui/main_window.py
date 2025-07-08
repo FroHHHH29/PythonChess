@@ -1,62 +1,50 @@
-import tkinter as tk
-import chess
 import pickle
+import chess
 import os
-from tkinter import messagebox
-from gui.board import ChessBoard
+import tkinter as tk
 from core.game_engine import ChessGame
+from gui.board import ChessBoard
+from tkinter import messagebox
 
-# Файл для сохранения игры
 SAVE_FILE = "chess_save.pkl"
 
 class MainWindow(tk.Tk):
-    def __init__(self):
-        """Инициализация главного окна приложения"""
+    def __init__(self):#делаем главное окно
         super().__init__()
-
-        # Основные настройки окна
-        self.title("Шахматы")
+        self.title("PyChess")
         self.configure(bg='white')
-        self.geometry("700x600")  # Ширина x Высота
+        self.geometry("700x600")
 
-        # Игровые компоненты
-        self.game = ChessGame()  # Создаем экземпляр игрового движка
-        self.chess_board = None  # Здесь будет храниться доска
-        self.player_color = chess.WHITE  # Цвет фигур игрока по умолчанию
-        self.move_history = []  # История ходов
-        self.has_saved_game = os.path.exists(SAVE_FILE)  # Проверяем есть ли сохранение
+        self.game = ChessGame()
+        self.chess_board = None
+        self.player_color = chess.WHITE #цвет фигуры игрока по умолчанию
+        self.move_history = [] #список с историей ходов (ИСПРАВЛЕНО: history_move -> move_history)
+        self.has_saved_game = os.path.exists(SAVE_FILE) #(true/false) проверяем есть ли сохраненная игра
 
-        # Элементы интерфейса
-        self.status_var = tk.StringVar()  # Для отображения статуса игры
-        self.btn_play_again = None  # Кнопка "Сыграть еще раз"
+        self.status_var = tk.StringVar() #обновление интерфейса для отображения статуса игры
+        self.btn_play_again = None #после шаха и мата кнопка сыграть еще раз
 
-        # Создаем стартовое меню
         self.create_start_menu()
 
-    def create_start_menu(self):
-        """Создает начальное меню с кнопками"""
-        # Обновляем статус наличия сохраненной игры
+
+    def create_start_menu(self):#начальное меню с кнопками
         self.has_saved_game = os.path.exists(SAVE_FILE)
+        for w in self.winfo_children(): #идем по списку дочерних элементов виджетов
+            w.destroy()
 
-        # Очищаем окно от предыдущих виджетов
-        for widget in self.winfo_children():
-            widget.destroy()
+        frame = tk.Frame(self, bg='white') #создание фрейма
+        frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER) #позицирование фрейма (по центру)
 
-        # Создаем основной фрейм меню
-        frame = tk.Frame(self, bg='white')
-        frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
-
-        # Заголовок игры
-        title = tk.Label(
+        title = tk.Label( #заголовок игры
             frame,
-            text="Шахматы",
+            text="PyChess",
             font=('Arial', 24, 'bold'),
             bg='white'
         )
         title.pack(pady=20)
 
-        # Кнопка запуска новой игры
-        new_game_btn = tk.Button(
+
+        new_game_btn = tk.Button( #кнопка запуска новой игры
             frame,
             text='Новая игра',
             command=self.select_color,
@@ -80,8 +68,8 @@ class MainWindow(tk.Tk):
             )
             continue_btn.pack(pady=10)
 
-        # Кнопка выхода из игры
-        quit_btn = tk.Button(
+
+        quit_btn = tk.Button( #кнопка выхода из игры
             frame,
             text='Выход',
             command=self.quit,
@@ -92,10 +80,9 @@ class MainWindow(tk.Tk):
         )
         quit_btn.pack(pady=10)
 
-    def select_color(self):
-        """Окно выбора цвета фигур"""
-        for widget in self.winfo_children():
-            widget.destroy()
+    def select_color(self): #окно выбора цвета фигур
+        for w in self.winfo_children():
+            w.destroy()
 
         frame = tk.Frame(self, bg='white')
         frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
@@ -111,7 +98,7 @@ class MainWindow(tk.Tk):
         white_btn = tk.Button(
             frame,
             text="Играть белыми",
-            command=lambda: self.start_game(chess.WHITE),
+            command=lambda: self.start_game(chess.WHITE), # функцию start_game передаем белый цвет игрока и запуск
             font=('Arial', 14),
             width=20,
             height=2,
@@ -122,7 +109,7 @@ class MainWindow(tk.Tk):
         black_btn = tk.Button(
             frame,
             text="Играть черными",
-            command=lambda: self.start_game(chess.BLACK),
+            command=lambda: self.start_game(chess.BLACK), # функцию start_game передаем белый цвет игрока и запуск
             font=('Arial', 14),
             width=20,
             height=2,
@@ -130,7 +117,7 @@ class MainWindow(tk.Tk):
             fg='white'
         )
         black_btn.pack(pady=10)
-
+#lambda нужна для активации кнопки (вызова функции) только при нажатии на нее, решает проблему с немедленным запуском функции
         back_btn = tk.Button(
             frame,
             text="Назад",
@@ -142,61 +129,48 @@ class MainWindow(tk.Tk):
         )
         back_btn.pack(pady=20)
 
-    def start_game(self, player_color):
-        """Начинает игру с выбранным цветом"""
+    def start_game(self, player_color): #начинаем игру с выбранным цветом
         self.player_color = player_color
-        self.move_history = []
-        for widget in self.winfo_children():
-            widget.destroy()
+        self.move_history = []  # ИСПРАВЛЕНО: history_move -> move_history
+        for w in self.winfo_children(): w.destroy()
         self.create_game_interface()
 
-    def load_saved_game(self):
-        """Загружает сохраненную игру из файла"""
-        try:
-            with open(SAVE_FILE, 'rb') as f:
-                save_data = pickle.load(f)
-                self.player_color = save_data['player_color']
-                self.move_history = save_data['move_history']
-                self.game = ChessGame()
-                self.game.board = chess.Board(save_data['fen'])
-                self.game.resigned = save_data['resigned']
-
-            for widget in self.winfo_children():
-                widget.destroy()
-            self.create_game_interface()
-        except Exception as e:
-            messagebox.showerror("Ошибка", f"Не удалось загрузить игру: {str(e)}")
-            self.has_saved_game = False
-            self.create_start_menu()
-
-    def create_game_interface(self):
-        """Создает основной игровой интерфейс"""
-        # Главный фрейм для доски и истории ходов
-        main_frame = tk.Frame(self)
+    def create_game_interface(self): #создаем основной игровой интерфейс
+        main_frame = tk.Frame(self) #главный фрейм для доски и истории ходов
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+                        #заполнение по
+                        #всей доступной
+                        #ширине
 
-        # Фрейм для шахматной доски
         board_frame = tk.Frame(main_frame)
         board_frame.pack(side=tk.LEFT, padx=10)
+                        #прижимается к левому
+                        #краю родительского контейнера
+
+        # ИСПРАВЛЕНО: Передача game и main_window
         self.chess_board = ChessBoard(board_frame, self.game, self, size=500)
         self.chess_board.pack()
 
-        # Фрейм для истории ходов
+
         history_frame = tk.LabelFrame(main_frame, text="История ходов", font=('Arial', 12))
-        history_frame.pack(side=tk.RIGHT, fill=tk.BOTH, padx=10, pady=10)
+        history_frame.pack(side=tk.RIGHT, fill=tk.BOTH, padx=10, pady=10) #фрейм для истории ходов
 
         self.history_text = tk.Text(
-            history_frame,
+            history_frame,  #родительский контейнер
             height=20,
             width=20,
             font=('Courier New', 10),
-            state=tk.DISABLED
+            state=tk.DISABLED #запрет редактирования
         )
+
         scrollbar = tk.Scrollbar(history_frame, command=self.history_text.yview)
         self.history_text.config(yscrollcommand=scrollbar.set)
+        #Обеспечивает двустороннюю связь:
+        #При прокрутке текста - ползунок скроллбара двигается
+        #При перемещении ползунка - текст прокручивается
 
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.history_text.pack(side=tk.LEFT, fill=tk.BOTH)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y) #справа растягивается по вертикали
+        self.history_text.pack(side=tk.LEFT, fill=tk.BOTH) #слева растягивается во все стороны
 
         self.update_history_display()
 
@@ -252,28 +226,53 @@ class MainWindow(tk.Tk):
 
         self.update_status('Ход белых' if self.game.board.turn == chess.WHITE else 'Ход чёрных')
 
-    def add_move_to_history(self, move):
-        """Добавляет ход в историю"""
-        move_str = move.uci()[:4]
-        pair_number = len(self.move_history) // 2 + 1
+    def load_saved_game(self): #загружаем сохраненную игру
+        try:
+            with open(SAVE_FILE, 'rb') as f: #открываем файл в бинарном режиме
+                save_data = pickle.load(f)
+            self.player_color = save_data['player_color']
+            self.move_history = save_data['move_history']  # ИСПРАВЛЕНО: move_history
+            self.game = ChessGame()
+            self.game.board = chess.Board(save_data['fen'])
+            self.game.resigned = save_data['resigned']
+
+            for widget in self.winfo_children():
+                widget.destroy()
+            self.create_game_interface()
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось загрузить игру: {str(e)}")
+            self.has_saved_game = False
+            self.create_start_menu()
+
+    def add_move_to_history(self, move): #добавляем ход в историю
+        move_str = move.uci()[:4]  #получаем ход без указания превращения в формате uci (e2e3)
+        pair_number = len(self.move_history) // 2 + 1  #определяем номер пары
 
         if len(self.move_history) % 2 == 0:
+            #если количество ходов четное (первый шаг - 0) - начинаем новую пару в списке
             self.move_history.append(f"{pair_number}. {move_str}")
         else:
+            #если нечетное - добавляем к последней записи в список
             self.move_history[-1] += f" - {move_str}"
+            #еобавляем пустую строку для разделения пар
             self.move_history.append("")
-
         self.update_history_display()
 
-    def update_history_display(self):
-        """Обновляет отображение истории ходов"""
+    def update_history_display(self): #обновляем отображение истории ходов
+        # 1.разблокируем поле для редактирования
         self.history_text.config(state=tk.NORMAL)
+
+        # 2.полностью очищаем содержимое
         self.history_text.delete(1.0, tk.END)
 
+        # 3.добавляем все ходы из списка истории ходов
         for move in self.move_history:
             self.history_text.insert(tk.END, move + "\n")
 
+        # 4.прокручиваем к концу
         self.history_text.see(tk.END)
+
+        # 5.снова блокируем редактирование
         self.history_text.config(state=tk.DISABLED)
 
     def return_to_menu(self):
