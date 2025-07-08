@@ -7,7 +7,7 @@ import chess
 
 
 class ChessBoard(Canvas):
-    # ИСПРАВЛЕНО: Добавлен параметр game в конструктор
+
     def __init__(self, parent, game, main_window, size=500):
         super().__init__(parent, width=size, height=size)  # создаем холст для доски
         self.pack()
@@ -16,7 +16,7 @@ class ChessBoard(Canvas):
         self.game = game  # используем переданную игру
         self.main_window = main_window
         self.sq_size = size // 8  # размер одной клетки
-        self.piece_images = {}  # словарь для фигурок (ИСПРАВЛЕНО: sq_pict -> piece_images)
+        self.piece_images = {}  # словарь для фигурок
         self.possible_moves = []  # Список возможных ходов для выбранной фигуры
 
         self.bind("<Button-1>", self.on_click)  # какая кнопка мыши будет активна (добавлен обработчик)

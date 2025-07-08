@@ -18,7 +18,7 @@ class MainWindow(tk.Tk):
         self.game = ChessGame()
         self.chess_board = None
         self.player_color = chess.WHITE #цвет фигуры игрока по умолчанию
-        self.move_history = [] #список с историей ходов (ИСПРАВЛЕНО: history_move -> move_history)
+        self.move_history = [] #список с историей ходов
         self.has_saved_game = os.path.exists(SAVE_FILE) #(true/false) проверяем есть ли сохраненная игра
 
         self.status_var = tk.StringVar() #обновление интерфейса для отображения статуса игры
@@ -131,7 +131,7 @@ class MainWindow(tk.Tk):
 
     def start_game(self, player_color): #начинаем игру с выбранным цветом
         self.player_color = player_color
-        self.move_history = []  # ИСПРАВЛЕНО: history_move -> move_history
+        self.move_history = []
         for w in self.winfo_children(): w.destroy()
         self.create_game_interface()
 
